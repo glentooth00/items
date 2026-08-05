@@ -3,40 +3,65 @@
 use Livewire\Component;
 use Flux\Flux;
 use App\Models\AssetType;
+use Livewire\WithPagination;
 
-new class extends Component
-{
-    public $name = '';
+new class extends Component {
 
-    // Sample data
-    public $assetTypes = [
-        ['id' => 1, 'name' => 'System Unit'],
-        ['id' => 2, 'name' => 'Laptop'],
-        ['id' => 3, 'name' => 'Printer'],
-        ['id' => 4, 'name' => 'UPS'],
-    ];
+    use WithPagination;
 
+    public $asset_code;
     public $asset_type;
+    public $deleteId;
+
+    public function render()
+    {
+        $assetTypes = AssetType::paginate(8);
+
+        return view('components.asset-types.⚡index', [
+            'assetTypes' => $assetTypes,
+        ]);
+    }
 
     public function save()
     {
         // Validate the input
         $this->validate([
             'asset_type' => 'required|string|max:255',
+            'asset_code' => 'nullable|string|max:255',
         ]);
 
         AssetType::create([
-            'asset_type' => $this->asset_type
+            'asset_type' => $this->asset_type,
+            'asset_code' => $this->asset_code,
         ]);
 
-        Flux::toast(
-        heading: 'Asset type added',
-        text: 'The new asset type has been added.',
-        variant: 'success');
+        Flux::toast(heading: 'Asset type added', text: 'The new asset type has been added.', variant: 'success');
 
         $this->reset();
 
         flux::modal('create-asset-type')->close();
+    }
+
+    public function delete()
+    {
+        AssetType::findOrFail($this->deleteId)->delete();
+
+        $this->deleteId = null;
+
+        Flux::modal('delete-asset-type')->close();
+
+        Flux::toast(
+            heading: 'Success',
+            text: 'Asset type deleted successfully.',
+            variant: 'success'
+        );
+    }
+
+    public function confirmDelete($id)
+    {
+        $this->deleteId = $id;
+
+        Flux::modal('delete-asset-type')->show();
     }
 };
 ?>
@@ -44,34 +69,42 @@ new class extends Component
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <x-settings.layout
-        :heading="__('Asset Types')"
-        :subheading="__('Create and manage categories used for IT assets.')">
+    <x-settings.layout :heading="__('Asset Types')" :subheading="__('Create and manage categories used for IT assets.')">
 
         <div class="space-y-6">
 
             {{-- Add Asset Type --}}
             <flux:card class="p-6">
                 <div class="flex items-end gap-4">
-                <form wire:submit="save">
-                        <div class="flex-1">
+                    <form wire:submit="save" class="flex flex-col md:flex-row items-end gap-4 w-full">
+
+                        <div class="flex-1 w-full">
                             <flux:input
                                 wire:model.defer="asset_type"
                                 label="Asset Type"
                                 placeholder="e.g. Desktop Computer"
                             />
                         </div>
+
+                        <div class="flex-1 w-full">
+                            <flux:input
+                                wire:model.defer="asset_code"
+                                label="Asset Code"
+                                placeholder="Enter asset code"
+                            />
+                        </div>
+
                         <flux:button
                             type="submit"
                             variant="primary"
                             icon="plus"
-                            class="mt-6 cursor-pointer">
+                            class="cursor-pointer"
+                        >
                             Add Type
                         </flux:button>
 
-                    </div>
-                </form>
-                    
+                    </form>
+                </div>
             </flux:card>
 
             {{-- Existing Asset Types --}}
@@ -88,18 +121,14 @@ new class extends Component
                             Manage the categories available throughout the system.
                         </flux:text>
                     </div>
-                    
-                    <flux:input
-                        icon="magnifying-glass"
-                        placeholder="Search..."
-                        class="max-w-xs"
-                    />
+
+                    <flux:input icon="magnifying-glass" placeholder="Search..." class="max-w-xs" />
 
                 </div>
 
                 <div class="overflow-x-auto">
 
-                    <table class="w-full">
+                    <table :paginate="$assetTypes" class="w-full">
 
                         <thead class="bg-zinc-50 dark:bg-zinc-800">
 
@@ -107,6 +136,10 @@ new class extends Component
 
                                 <th class="px-6 py-3 text-sm font-medium">
                                     Asset Type
+                                </th>
+
+                                <th class="px-6 py-3 text-sm font-medium w-40">
+                                    Asset Code
                                 </th>
 
                                 <th class="px-6 py-3 text-right text-sm font-medium w-40">
@@ -120,28 +153,31 @@ new class extends Component
                         <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
 
                             @foreach ($assetTypes as $type)
-
                                 <tr>
 
-                                    <td class="px-6 py-4">
-                                        {{ $type['name'] }}
+                                    <td class="px-7 py-5">
+                                        {{ $type->asset_type }}
                                     </td>
 
-                                    <td class="px-6 py-4">
+                                    <td class="px-7 py-5">
+                                        {{ $type->asset_code }}
+                                    </td>
+
+                                    <td class="px-7 py-4">
 
                                         <div class="flex justify-end gap-2">
 
-                                            <flux:button
-                                                size="sm"
-                                                variant="ghost"
-                                                icon="pencil-square">
+                                            <flux:button size="sm" class="cursor-pointer" variant="ghost" icon="pencil-square">
                                                 Edit
                                             </flux:button>
 
-                                            <flux:button
-                                                size="sm"
-                                                variant="danger"
-                                                icon="trash">
+                                            <flux:button 
+                                                size="sm" 
+                                                class="cursor-pointer" 
+                                                variant="danger" 
+                                                icon="trash"
+                                                wire:click="confirmDelete({{ $type->id }})"
+                                                >
                                                 Delete
                                             </flux:button>
 
@@ -150,12 +186,14 @@ new class extends Component
                                     </td>
 
                                 </tr>
-
                             @endforeach
 
                         </tbody>
 
                     </table>
+
+                    <!-- $orders = Order::paginate(5) -->
+                    <flux:pagination class="cursor-pointer" :paginator="$assetTypes" />
 
                 </div>
 
@@ -164,5 +202,42 @@ new class extends Component
         </div>
 
     </x-settings.layout>
+
+    <!---- Confirmation Modal when deleting ---->
+    <flux:modal name="delete-asset-type" class="max-w-md">
+    <div class="space-y-6">
+
+        <div>
+            <flux:heading size="lg">
+                Delete Asset Type
+            </flux:heading>
+
+            <flux:text class="mt-2">
+                Are you sure you want to delete this asset type? This action
+                cannot be undone.
+            </flux:text>
+        </div>
+
+        <div class="flex justify-end gap-2">
+            <flux:button
+                variant="ghost"
+                x-on:click="$flux.modal('delete-asset-type').close()"
+                class="cursor-pointer"
+            >
+                Cancel
+            </flux:button>
+
+            <flux:button
+                variant="danger"
+                icon="trash"
+                wire:click="delete"
+                class="cursor-pointer"
+            >
+                Delete
+            </flux:button>
+        </div>
+
+    </div>
+    </flux:modal>
 
 </section>
