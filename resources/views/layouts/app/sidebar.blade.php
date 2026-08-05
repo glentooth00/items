@@ -19,6 +19,12 @@
                     wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
+                <flux:sidebar.group :heading="__('')" class="grid">
+                <flux:sidebar.item icon="inbox-stack" :href="route('inventory.index')" :current="request()->routeIs('inventory.index')"
+                    wire:navigate>
+                    {{ __('IT Inventory') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
             </flux:sidebar.group>
             <flux:sidebar.group :heading="__('')" class="grid">
                 <flux:sidebar.item icon="square-3-stack-3d" :href="route('assets.index')" :current="request()->routeIs('assets.index')"

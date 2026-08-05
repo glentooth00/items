@@ -13,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::livewire('/asset-types', 'asset-types.index')->name('asset-types.index');
 
+    Route::livewire('/inventory', 'inventory.index')->name('inventory.index');
+
 });
 
 require __DIR__.'/settings.php';
