@@ -11,6 +11,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('/assets', 'assets.index')->name('assets.index');
     Route::livewire('/users', 'users.index')->name('users.index'); 
 
+    Route::livewire('/equipments', 'equipments.index')->name('equipments.index');
     Route::livewire('/asset-types', 'asset-types.index')->name('asset-types.index');
 
     Route::livewire('/inventory', 'inventory.index')->name('inventory.index');
