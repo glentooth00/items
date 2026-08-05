@@ -12,6 +12,7 @@ new class extends Component {
     public $asset_code;
     public $asset_type;
     public $deleteId;
+    public $asset_route;
 
     public function render()
     {
@@ -26,13 +27,15 @@ new class extends Component {
     {
         // Validate the input
         $this->validate([
-            'asset_type' => 'required|string|max:255',
+            'asset_type' => 'required|unique:asset_types,asset_type|string|max:255',
             'asset_code' => 'nullable|string|max:255',
+            'asset_route' => 'nullable|unique:asset_types,asset_route|string|max:255',
         ]);
 
         AssetType::create([
             'asset_type' => $this->asset_type,
             'asset_code' => $this->asset_code,
+            'asset_route' => $this->asset_route,
         ]);
 
         Flux::toast(heading: 'Asset type added', text: 'The new asset type has been added.', variant: 'success');
@@ -94,6 +97,14 @@ new class extends Component {
                             />
                         </div>
 
+                        <div class="flex-1 w-full">
+                            <flux:input
+                                wire:model.defer="asset_route"
+                                label="Asset Route"
+                                placeholder="Enter asset route"
+                            />
+                        </div>
+
                         <flux:button
                             type="submit"
                             variant="primary"
@@ -128,69 +139,70 @@ new class extends Component {
 
                 <div class="overflow-x-auto">
 
-                    <table :paginate="$assetTypes" class="w-full">
+                <table :paginate="$assetTypes" class="w-full">
 
-                        <thead class="bg-zinc-50 dark:bg-zinc-800">
+                    <thead class="bg-zinc-50 dark:bg-zinc-800">
 
-                            <tr class="text-left">
+                        <tr>
 
-                                <th class="px-6 py-3 text-sm font-medium">
-                                    Asset Type
-                                </th>
+                            <th class="px-6 py-3 text-sm font-medium text-center">
+                                Asset Type
+                            </th>
 
-                                <th class="px-6 py-3 text-sm font-medium w-40">
-                                    Asset Code
-                                </th>
+                            <th class="px-6 py-3 text-sm font-medium text-center w-40">
+                                Asset Code
+                            </th>
 
-                                <th class="px-6 py-3 text-right text-sm font-medium w-40">
-                                    Actions
-                                </th>
+                            <th class="px-6 py-3 text-sm font-medium text-center w-40">
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
+
+                        @foreach ($assetTypes as $type)
+                            <tr wire:key="asset-type-{{ $type->id }}">
+
+                                <td class="px-7 py-5 text-center">
+                                    {{ $type->asset_type }}
+                                </td>
+
+                                <td class="px-7 py-5 text-center">
+                                    {{ $type->asset_code }}
+                                </td>
+
+                                <td class="px-7 py-4">
+                                    <div class="flex justify-center gap-2">
+
+                                        <flux:button
+                                            size="sm"
+                                            class="cursor-pointer"
+                                            variant="ghost"
+                                            icon="pencil-square">
+                                            Edit
+                                        </flux:button>
+
+                                        <flux:button
+                                            size="sm"
+                                            class="cursor-pointer"
+                                            variant="danger"
+                                            icon="trash"
+                                            wire:click="confirmDelete({{ $type->id }})">
+                                            Delete
+                                        </flux:button>
+
+                                    </div>
+                                </td>
 
                             </tr>
+                        @endforeach
 
-                        </thead>
+                    </tbody>
 
-                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
-
-                            @foreach ($assetTypes as $type)
-                                <tr>
-
-                                    <td class="px-7 py-5">
-                                        {{ $type->asset_type }}
-                                    </td>
-
-                                    <td class="px-7 py-5">
-                                        {{ $type->asset_code }}
-                                    </td>
-
-                                    <td class="px-7 py-4">
-
-                                        <div class="flex justify-end gap-2">
-
-                                            <flux:button size="sm" class="cursor-pointer" variant="ghost" icon="pencil-square">
-                                                Edit
-                                            </flux:button>
-
-                                            <flux:button 
-                                                size="sm" 
-                                                class="cursor-pointer" 
-                                                variant="danger" 
-                                                icon="trash"
-                                                wire:click="confirmDelete({{ $type->id }})"
-                                                >
-                                                Delete
-                                            </flux:button>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-                            @endforeach
-
-                        </tbody>
-
-                    </table>
+                </table>
 
                     <!-- $orders = Order::paginate(5) -->
                     <flux:pagination class="cursor-pointer" :paginator="$assetTypes" />
