@@ -1,6 +1,7 @@
 @php
-    $assetTypes = \App\Models\AssetType::orderBy('asset_type')->get();
+    $assetTypes = \App\Models\AssetType::orderBy('asset_type','ASC')->get();
 @endphp
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 
@@ -39,9 +40,19 @@
             
             <flux:sidebar.group expandable :expanded="false" heading="Assets" class="grid">
                 @foreach ($assetTypes as $type)
-                    <flux:sidebar.item href="#">
-                        {{ $type->asset_type }}
-                    </flux:sidebar.item>
+                    @if (Route::has($type->asset_route))
+                        <flux:sidebar.item
+                            :href="route($type->asset_route)"
+                            wire:navigate
+                        >
+                            {{ $type->asset_type }}
+                        </flux:sidebar.item>
+                    @else
+                        <flux:sidebar.item disabled>
+                            {{ $type->asset_type }}
+                            <span class="text-xs text-zinc-500">(No Route)</span>
+                        </flux:sidebar.item>
+                    @endif
                 @endforeach
             </flux:sidebar.group>
 

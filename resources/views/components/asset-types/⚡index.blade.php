@@ -27,9 +27,9 @@ new class extends Component {
     {
         // Validate the input
         $this->validate([
-            'asset_type' => 'required|string|max:255',
+            'asset_type' => 'required|unique:asset_types,asset_type|string|max:255',
             'asset_code' => 'nullable|string|max:255',
-            'asset_route' => 'nullable|string|max:255',
+            'asset_route' => 'nullable|unique:asset_types,asset_route|string|max:255',
         ]);
 
         AssetType::create([
