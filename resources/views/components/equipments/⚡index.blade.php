@@ -2,23 +2,22 @@
 
 use Livewire\Component;
 use Flux\Flux;
-use App\Models\AssetType;
+use App\Models\Equipment;
 use Livewire\WithPagination;
 
 new class extends Component {
 
     use WithPagination;
 
-    public $asset_code;
-    public $asset_type;
+    public $equipment_name;
     public $deleteId;
 
     public function render()
     {
-        $assetTypes = AssetType::paginate(8);
+        $equipments = Equipment::paginate(8);
 
-        return view('components.asset-types.⚡index', [
-            'assetTypes' => $assetTypes,
+        return view('components.equipments.⚡index', [
+            'equipments' => $equipments,
         ]);
     }
 
@@ -26,34 +25,36 @@ new class extends Component {
     {
         // Validate the input
         $this->validate([
-            'asset_type' => 'required|string|max:255',
-            'asset_code' => 'nullable|string|max:255',
+            'equipment_name' => 'required|string|max:255',
         ]);
 
-        AssetType::create([
-            'asset_type' => $this->asset_type,
-            'asset_code' => $this->asset_code,
+        Equipment::create([
+            'equipment_name' => $this->equipment_name,
         ]);
 
-        Flux::toast(heading: 'Asset type added', text: 'The new asset type has been added.', variant: 'success');
+        Flux::toast(
+            heading: 'Equipment added', 
+            text: 'The new equipment has been added.', 
+            variant: 'success'
+            );
 
         $this->reset();
 
-        flux::modal('create-asset-type')->close();
+        flux::modal('create-equipment')->close();
     }
 
     public function delete()
     {
-        AssetType::findOrFail($this->deleteId)->delete();
+        Equipment::findOrFail($this->deleteId)->delete();
 
         $this->deleteId = null;
 
-        Flux::modal('delete-asset-type')->close();
+        Flux::modal('delete-equipment')->close();
 
         Flux::toast(
             heading: 'Success',
-            text: 'Asset type deleted successfully.',
-            variant: 'success'
+            text: 'Equipment deleted successfully.',
+            variant: 'success',
         );
     }
 
@@ -61,7 +62,7 @@ new class extends Component {
     {
         $this->deleteId = $id;
 
-        Flux::modal('delete-asset-type')->show();
+        Flux::modal('delete-equipment')->show();
     }
 };
 ?>
@@ -80,17 +81,17 @@ new class extends Component {
 
                         <div class="flex-1 w-full">
                             <flux:input
-                                wire:model.defer="asset_type"
-                                label="Asset Type"
+                                wire:model.defer="equipment_name"
+                                label="Equipment Name"
                                 placeholder="e.g. Desktop Computer"
                             />
                         </div>
 
-                        <div class="flex-1 w-full">
+                         <div class="flex-1 w-full">
                             <flux:input
-                                wire:model.defer="asset_code"
-                                label="Asset Code"
-                                placeholder="Enter asset code"
+                                wire:model.defer="equipment_name"
+                                label="Route Name"
+                                placeholder="e.g. desktop-computer"
                             />
                         </div>
 
@@ -100,7 +101,7 @@ new class extends Component {
                             icon="plus"
                             class="cursor-pointer"
                         >
-                            Add Type
+                            Add Equipment
                         </flux:button>
 
                     </form>
@@ -114,11 +115,11 @@ new class extends Component {
 
                     <div>
                         <flux:heading size="lg">
-                            Existing Asset Types
+                            Existing Equipments
                         </flux:heading>
 
                         <flux:text class="mt-1">
-                            Manage the categories available throughout the system.
+                            Manage the equipments available throughout the system.
                         </flux:text>
                     </div>
 
@@ -128,72 +129,65 @@ new class extends Component {
 
                 <div class="overflow-x-auto">
 
-                    <table :paginate="$assetTypes" class="w-full">
+                <table :paginate="$equipments" class="w-full">
 
-                        <thead class="bg-zinc-50 dark:bg-zinc-800">
+                    <thead class="bg-zinc-50 dark:bg-zinc-800">
+                        <tr>
 
-                            <tr class="text-left">
+                            <th class="px-6 py-3 text-sm font-medium text-center">
+                                Equipment Name
+                            </th>
 
-                                <th class="px-6 py-3 text-sm font-medium">
-                                    Asset Type
-                                </th>
+                            <th class="px-6 py-3 text-sm font-medium text-center w-40">
+                                Actions
+                            </th>
 
-                                <th class="px-6 py-3 text-sm font-medium w-40">
-                                    Asset Code
-                                </th>
+                        </tr>
+                    </thead>
 
-                                <th class="px-6 py-3 text-right text-sm font-medium w-40">
-                                    Actions
-                                </th>
+                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
+
+                        @foreach ($equipments as $equipment)
+                            <tr>
+
+                                <td class="px-7 py-5 text-center">
+                                    {{ $equipment->equipment_name }}
+                                </td>
+
+                                <td class="px-7 py-4">
+                                    <div class="flex justify-center gap-2">
+
+                                        <flux:button
+                                            size="sm"
+                                            class="cursor-pointer"
+                                            variant="ghost"
+                                            icon="pencil-square">
+                                            Edit
+                                        </flux:button>
+
+                                        <flux:button
+                                            wire:key="delete-{{ $equipment->id }}"
+                                            size="sm"
+                                            variant="danger"
+                                            icon="trash"
+                                            wire:click="confirmDelete({{ $equipment->id }})"
+                                            class="cursor-pointer"
+                                        >
+                                            Delete
+                                        </flux:button>
+
+                                    </div>
+                                </td>
 
                             </tr>
+                        @endforeach
 
-                        </thead>
+                    </tbody>
 
-                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
-
-                            @foreach ($assetTypes as $type)
-                                <tr>
-
-                                    <td class="px-7 py-5">
-                                        {{ $type->asset_type }}
-                                    </td>
-
-                                    <td class="px-7 py-5">
-                                        {{ $type->asset_code }}
-                                    </td>
-
-                                    <td class="px-7 py-4">
-
-                                        <div class="flex justify-end gap-2">
-
-                                            <flux:button size="sm" class="cursor-pointer" variant="ghost" icon="pencil-square">
-                                                Edit
-                                            </flux:button>
-
-                                            <flux:button 
-                                                size="sm" 
-                                                class="cursor-pointer" 
-                                                variant="danger" 
-                                                icon="trash"
-                                                wire:click="confirmDelete({{ $type->id }})"
-                                                >
-                                                Delete
-                                            </flux:button>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-                            @endforeach
-
-                        </tbody>
-
-                    </table>
+                </table>
 
                     <!-- $orders = Order::paginate(5) -->
-                    <flux:pagination class="cursor-pointer" :paginator="$assetTypes" />
+                    <flux:pagination class="cursor-pointer" :paginator="$equipments" />
 
                 </div>
 
@@ -204,16 +198,16 @@ new class extends Component {
     </x-settings.layout>
 
     <!---- Confirmation Modal when deleting ---->
-    <flux:modal name="delete-asset-type" class="max-w-md">
+    <flux:modal name="delete-equipment" class="max-w-md">
     <div class="space-y-6">
 
         <div>
             <flux:heading size="lg">
-                Delete Asset Type
+                Delete Equipment
             </flux:heading>
 
             <flux:text class="mt-2">
-                Are you sure you want to delete this asset type? This action
+                Are you sure you want to delete this equipment? This action
                 cannot be undone.
             </flux:text>
         </div>
@@ -221,7 +215,7 @@ new class extends Component {
         <div class="flex justify-end gap-2">
             <flux:button
                 variant="ghost"
-                x-on:click="$flux.modal('delete-asset-type').close()"
+                x-on:click="$flux.modal('delete-equipment').close()"
                 class="cursor-pointer"
             >
                 Cancel
