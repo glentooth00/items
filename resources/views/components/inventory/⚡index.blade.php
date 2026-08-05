@@ -1,44 +1,33 @@
 <?php
 
 use Livewire\Component;
-use App\Models\AssetType;
-use Livewire\withPagination;
 
 new class extends Component
 {
-
-    use withPagination;
-
-    public $assets =[];
-
-
-
     public function render()
     {
-
-        $assets = AssetType::all();
-
-        return view('components.assets.⚡index',[
-            'assets' => $assets,
-        ]);
+        return view('components.inventory.⚡index');
     }
 };
 ?>
 
+
 <div>
-    <flux:heading size="xl">Manage Assets</flux:heading>
-    <flux:text class="mt-1 mb-2">Manage IT assets</flux:text>
+    <flux:heading size="xl">Manage Inventory</flux:heading>
+    <flux:text class="mt-1 mb-2">Manage asset inventory</flux:text>
     
     <flux:separator variant="subtle" />
 
-        <flux:modal.trigger name="add-asset">
+    <flux:modal.trigger name="add-inventory">
             <flux:button icon="plus-circle" class="mt-2 cursor-pointer" variant="primary">
-                Add Asset
+                Add Inventory
             </flux:button>
-        </flux:modal.trigger>
+    </flux:modal.trigger>
 
 
-        <!---- MODAL ---->
+
+
+    <!----  ADD INVENTORY MODAL ---->
         <flux:modal name="add-asset" class="md:w-96">
             <div class="space-y-6">
                 <div>
@@ -46,9 +35,9 @@ new class extends Component
                     <flux:text class="mt-2">Enter asset details.</flux:text>
                 </div>
                 <flux:select wire:model="e" placeholder="Choose equipment...">
-                    @foreach ($assets as $asset)
+                    {{-- @foreach ($assets as $asset)
                         <flux:select.option value="{{ $asset->id }}">{{ $asset->asset_type }}</flux:select.option>
-                    @endforeach
+                    @endforeach --}}
                 </flux:select>
 
                 <flux:input label="Date of birth" type="date" />
