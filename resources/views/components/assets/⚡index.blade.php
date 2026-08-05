@@ -2,26 +2,26 @@
 
 use Livewire\Component;
 use App\Models\AssetType;
-use Livewire\withPagination;
+use Livewire\WithPagination;
 
 new class extends Component
 {
 
-    use withPagination;
-
-    public $assets =[];
+    use WithPagination;
+    public $asset_id;
 
 
 
     public function render()
     {
-
         $assets = AssetType::all();
 
-        return view('components.assets.⚡index',[
+
+        return view('components.assets.⚡index', [
             'assets' => $assets,
         ]);
     }
+
 };
 ?>
 
@@ -45,7 +45,9 @@ new class extends Component
                     <flux:heading size="lg">Add Asset</flux:heading>
                     <flux:text class="mt-2">Enter asset details.</flux:text>
                 </div>
-                <flux:select wire:model="e" placeholder="Choose equipment...">
+                
+                <flux:select wire:model="asset_id" placeholder="Choose equipment...">
+                    
                     @foreach ($assets as $asset)
                         <flux:select.option value="{{ $asset->id }}">{{ $asset->asset_type }}</flux:select.option>
                     @endforeach
