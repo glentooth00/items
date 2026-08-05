@@ -1,3 +1,6 @@
+@php
+    $assetTypes = \App\Models\AssetType::orderBy('asset_type')->get();
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 
@@ -32,7 +35,17 @@
                     {{ __('Manage Assets') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
+
+            
             <flux:sidebar.group expandable :expanded="false" heading="Assets" class="grid">
+                @foreach ($assetTypes as $type)
+                    <flux:sidebar.item href="#">
+                        {{ $type->asset_type }}
+                    </flux:sidebar.item>
+                @endforeach
+            </flux:sidebar.group>
+
+            {{-- <flux:sidebar.group expandable :expanded="false" heading="Assets" class="grid">
                 <flux:sidebar.item href="#">UPS</flux:sidebar.item>
                 <flux:sidebar.item href="#">System Units</flux:sidebar.item>
                 <flux:sidebar.item href="#">Hard Drives</flux:sidebar.item>
@@ -40,7 +53,7 @@
                 <flux:sidebar.item href="#">Cameras</flux:sidebar.item>
                 <flux:sidebar.item href="#">Monitors</flux:sidebar.item>
                 <flux:sidebar.item href="#">Laptops</flux:sidebar.item>
-            </flux:sidebar.group>
+            </flux:sidebar.group> --}}
 
             <flux:sidebar.group :heading="__('')" class="grid">
                 <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.index')"

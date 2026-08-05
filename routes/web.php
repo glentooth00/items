@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::livewire('/inventory', 'inventory.index')->name('inventory.index');
 
+
 });
 
 require __DIR__.'/settings.php';

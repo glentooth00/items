@@ -87,6 +87,14 @@ new class extends Component {
                             />
                         </div>
 
+                         <div class="flex-1 w-full">
+                            <flux:input
+                                wire:model.defer="equipment_name"
+                                label="Route Name"
+                                placeholder="e.g. desktop-computer"
+                            />
+                        </div>
+
                         <flux:button
                             type="submit"
                             variant="primary"
