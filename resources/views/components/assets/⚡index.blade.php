@@ -4,6 +4,7 @@ use Livewire\Component;
 use App\Models\AssetType;
 use App\Models\Assets;
 use Livewire\WithPagination;
+use Flux\Flux;
 
 new class extends Component
 {
@@ -11,7 +12,7 @@ new class extends Component
     use WithPagination;
     public $asset_id;
     public $asset_code = '';
-
+    public $deleteId = null;
     public $tag_number;
     public $user_location;
     public $pm_schedule_date;
@@ -19,21 +20,22 @@ new class extends Component
     public $remarks;
     public $sortBy = 'actual_pm_date';
     public $sortDirection = 'asc';
-
+    public $status;
 
     public function render()
     {
         $assetTypes = AssetType::all();
 
-        $assets = Assets::select('assets.*')
-                ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
-                ->orderBy(
-                    $this->sortBy === 'asset_type'
-                        ? 'asset_types.asset_type'
-                        : 'assets.' . $this->sortBy,
-                    $this->sortDirection
-                )
-                ->paginate(10);
+        $assets = Assets::with('assetType')
+            ->select('assets.*')
+            ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
+            ->orderBy(
+                $this->sortBy === 'asset_type'
+                    ? 'asset_types.asset_type'
+                    : 'assets.' . $this->sortBy,
+                $this->sortDirection
+            )
+            ->paginate(10);
 
         return view('components.assets.⚡index', [
             'assetTypes' => $assetTypes,
@@ -67,6 +69,7 @@ new class extends Component
             'pm_schedule_date'  => 'nullable',
             'actual_pm_date'    => 'nullable|date',
             'remarks'           => 'nullable|string',
+            'status'            => 'nullable|string',
         ]);
 
         // Check the final tag number for uniqueness
@@ -82,6 +85,7 @@ new class extends Component
             'pm_schedule_date' => $this->pm_schedule_date,
             'actual_pm_date'   => $this->actual_pm_date,
             'remarks'          => $this->remarks,
+            'status'           => $this->status,
         ]);
 
         Flux::toast(
@@ -105,9 +109,42 @@ new class extends Component
         // Open view modal
     }
 
-    public function delete($id)
+
+    public function confirmDelete($id)
     {
-        // Delete or show confirmation
+        $this->deleteId = $id;
+
+        Flux::modal('delete-asset')->show();
+    }
+
+    public function delete()
+    {
+        $asset = Assets::findOrFail($this->deleteId);
+
+        if (! $asset) {
+
+            Flux::toast(
+                heading: 'Not Found',
+                text: 'Asset no longer exists.',
+                variant: 'danger'
+            );
+
+            return;
+        }
+
+        $asset->delete();
+
+        Flux::modal('delete-asset')->close();
+
+        Flux::toast(
+            heading: 'Deleted',
+            text: 'Asset deleted successfully.',
+            variant: 'success'
+        );
+
+        $this->deleteId = null;
+
+        $this->resetPage();
     }
 
     public function sort($column)
@@ -129,7 +166,7 @@ new class extends Component
     <flux:separator variant="subtle" />
 
         <flux:modal.trigger name="add-asset">
-            <flux:button icon="plus-circle" class="mt-2 cursor-pointer" variant="primary">
+            <flux:button icon="plus-circle" class="mt-3 cursor-pointer" variant="primary">
                 Add Asset
             </flux:button>
         </flux:modal.trigger>
@@ -158,7 +195,7 @@ new class extends Component
                     Person in Charge   
                 </flux:table.column>
                 <flux:table.column>
-                    Status/Remarks   
+                    Status   
                 </flux:table.column>
                 <flux:table.column>
                        
@@ -169,7 +206,29 @@ new class extends Component
                 @forelse ($assets as $asset)
                     <flux:table.row>
                         <flux:table.cell>
+                            @php
+                            $color = match ($asset->assetType?->asset_type) {
+                                'WiFi Router'          => 'blue',
+                                'UPS'                  => 'amber',
+                                'System Unit'          => 'zinc',
+                                'Server'               => 'red',
+                                'Router'               => 'sky',
+                                'Printer (Ink Tank)'   => 'green',
+                                'Printer (Dot Matrix)' => 'orange',
+                                'Network Switch'       => 'indigo',
+                                'Laser Printer'        => 'violet',
+                                'Laptop'               => 'cyan',
+                                'External Drive'       => 'emerald',
+                                'CCTV NVR'             => 'purple',
+                                'CCTV Camera'          => 'yellow',
+                                'Access Point'         => 'teal',
+                                default                => 'pink',
+                            };
+                        @endphp
+
+                        <flux:badge variant="solid" :color="$color">
                             {{ $asset->assetType?->asset_type }}
+                        </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
                             {{ $asset->tag_number }} 
@@ -184,10 +243,30 @@ new class extends Component
                             {{ $asset->actual_pm_date?->format('M d, Y') ?? '-' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $asset->person_in_charge }}
+                            {{ $asset->person_in_charge ?? 'R.J. Dequilla/ G.D. Alpasan/ P.G. Cabrillos' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $asset->remarks ?? '-' }}
+                            @php
+                                $status = trim($asset->status ?? '');
+
+                                $color = match (strtolower($status)) {
+                                    'done'         => 'emerald',
+                                    'pending'      => 'amber',
+                                    'in progress'  => 'blue',
+                                    'for repair'   => 'orange',
+                                    'defective'    => 'red',
+                                    'disposed'     => 'zinc',
+                                    default        => 'purple',
+                                };
+                            @endphp
+
+                            @if ($status)
+                                <flux:badge variant="solid" :color="$color">
+                                    {{ $status }}
+                                </flux:badge>
+                            @else
+                                <span class="text-zinc-500">-</span>
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell class="py-0">
 
@@ -222,7 +301,7 @@ new class extends Component
                                     <flux:menu.item
                                         icon="trash"
                                         variant="danger"
-                                        wire:click="delete({{ $asset->id }})"
+                                        wire:click="confirmDelete({{ $asset->id }})"
                                         class="cursor-pointer"
                                     >
                                         Delete
@@ -301,20 +380,7 @@ new class extends Component
                         />
                         </div>
 
-                    {{-- <div>
-                        <flux:input
-                            wire:model="asset_tag"
-                            label="Asset Tag"
-                            placeholder="Enter asset tag"
-                        />
-                    </div> --}}
-
                     <div>
-                        {{-- <flux:input
-                            wire:model="PM Schedule Date"
-                            label="Purchase Date"
-                            type="date"
-                        /> --}}
                     </div>
 
                     <div>
@@ -332,21 +398,38 @@ new class extends Component
                         />
                     </div>
 
-                    {{-- <div>
-                        <flux:input
-                            wire:model="location"
-                            label="Location"
-                            placeholder="Enter location"
-                        />
-                    </div> --}}
 
-                    {{-- <div>
-                        <flux:input
-                            wire:model="assigned_to"
-                            label="Assigned To"
-                            placeholder="Enter assigned user"
-                        />
-                    </div>--}}
+                    <div>
+                        <flux:select
+                            wire:model="status"
+                            label="Status"
+                            placeholder="Select status"
+                        >
+                            <flux:select.option value="Pending">
+                                Pending
+                            </flux:select.option>
+
+                            <flux:select.option value="In Progress">
+                                In Progress
+                            </flux:select.option>
+
+                            <flux:select.option value="Done">
+                                Done
+                            </flux:select.option>
+
+                            <flux:select.option value="For Repair">
+                                For Repair
+                            </flux:select.option>
+
+                            <flux:select.option value="Defective">
+                                Defective
+                            </flux:select.option>
+
+                            <flux:select.option value="Disposed">
+                                Disposed
+                            </flux:select.option>
+                        </flux:select>
+                    </div>
 
                     <div class="lg:col-span-2">
                         <flux:textarea
@@ -359,7 +442,7 @@ new class extends Component
                 </div>
                 
 
-                    <div class="flex justify-end gap-2">
+                    <div class="flex justify-end gap-2 mt-2">
                         <flux:modal.close>
                             <flux:button variant="ghost">
                                 Cancel
@@ -373,4 +456,40 @@ new class extends Component
                 </form>
         </div>
     </flux:modal>
+
+
+    <flux:modal name="delete-asset" class="md:w-96">
+    <div class="space-y-6">
+
+        <div>
+            <flux:heading size="lg">
+                Delete Asset
+            </flux:heading>
+
+            <flux:text class="mt-2">
+                Are you sure you want to delete this asset?
+                This action cannot be undone.
+            </flux:text>
+        </div>
+
+        <div class="flex justify-end gap-2">
+
+            <flux:modal.close>
+                <flux:button variant="ghost">
+                    Cancel
+                </flux:button>
+            </flux:modal.close>
+
+            <flux:button
+                variant="danger"
+                wire:click="delete"
+                class="cursor-pointer"
+            >
+                Delete
+            </flux:button>
+
+        </div>
+
+    </div>
+</flux:modal>
 </div>
