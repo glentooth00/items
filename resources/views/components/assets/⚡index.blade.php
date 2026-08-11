@@ -21,14 +21,31 @@ new class extends Component
     public $sortBy = 'actual_pm_date';
     public $sortDirection = 'asc';
     public $status;
+    public $filterAssetType = '';
+    public $searchTag = '';
 
     public function render()
     {
-        $assetTypes = AssetType::all();
+        $assetTypes = AssetType::orderBy('asset_type')->get();
 
         $assets = Assets::with('assetType')
             ->select('assets.*')
             ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
+
+            // Filter by IT Equipment
+            ->when($this->filterAssetType, function ($query) {
+                $query->where('assets.asset_id', $this->filterAssetType);
+            })
+
+            // Search by Tag Number
+            ->when($this->searchTag, function ($query) {
+                $query->where(
+                    'assets.tag_number',
+                    'like',
+                    '%' . $this->searchTag . '%'
+                );
+            })
+
             ->orderBy(
                 $this->sortBy === 'asset_type'
                     ? 'asset_types.asset_type'
@@ -69,8 +86,9 @@ new class extends Component
             'pm_schedule_date'  => 'nullable',
             'actual_pm_date'    => 'nullable|date',
             'remarks'           => 'nullable|string',
-            'status'            => 'nullable|string',
+            'status'            => 'required|string|in:Pending,In Progress,Done,For Repair,Defective,Disposed,Damaged',
         ]);
+
 
         // Check the final tag number for uniqueness
         if (Assets::where('tag_number', $tagNumber)->exists()) {
@@ -108,7 +126,6 @@ new class extends Component
     {
         // Open view modal
     }
-
 
     public function confirmDelete($id)
     {
@@ -156,6 +173,16 @@ new class extends Component
             $this->sortDirection = 'asc';
         }
     }
+
+    public function updatedFilterAssetType()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSearchTag()
+    {
+        $this->resetPage();
+    }
 };
 ?>
 
@@ -165,12 +192,48 @@ new class extends Component
     
     <flux:separator variant="subtle" />
 
-        <flux:modal.trigger name="add-asset">
-            <flux:button icon="plus-circle" class="mt-3 cursor-pointer" variant="primary">
-                Add Asset
-            </flux:button>
-        </flux:modal.trigger>
+<div class="flex items-end justify-between gap-3 mt-3">
 
+    <flux:modal.trigger name="add-asset">
+        <flux:button
+            icon="plus-circle"
+            class="cursor-pointer"
+            variant="primary"
+            style="margin-top:1.6em"
+        >
+            Add Asset
+        </flux:button>
+    </flux:modal.trigger>
+
+    <div class="flex items-end gap-3">
+        <div class="w-64">
+            <flux:select
+                wire:model.live="filterAssetType"
+                label="Filter by IT Equipment"
+            >
+                <flux:select.option value="">
+                    All IT Equipment
+                </flux:select.option>
+
+                @foreach ($assetTypes as $assetType)
+                    <flux:select.option value="{{ $assetType->id }}">
+                        {{ $assetType->asset_type }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+        </div>
+
+        <div class="w-64">
+            <flux:input
+                wire:model.live.debounce.300ms="searchTag"
+                label="Search Tag Number"
+                placeholder="e.g. PC-001"
+                icon="magnifying-glass"
+            />
+        </div>
+    </div>
+
+</div>
 
         <!------- Table section ------->
 
@@ -256,6 +319,7 @@ new class extends Component
                                     'for repair'   => 'orange',
                                     'defective'    => 'red',
                                     'disposed'     => 'zinc',
+                                    'damaged'      => 'red',
                                     default        => 'purple',
                                 };
                             @endphp
@@ -367,7 +431,6 @@ new class extends Component
                                 class="mt-4"
                                 wire:model="tag_number"
                                 label=""
-                                type="number"
                             />
                         </div>
                     </div>
@@ -400,35 +463,41 @@ new class extends Component
 
 
                     <div>
-                        <flux:select
-                            wire:model="status"
-                            label="Status"
-                            placeholder="Select status"
-                        >
-                            <flux:select.option value="Pending">
-                                Pending
-                            </flux:select.option>
+                    <flux:select
+                        wire:model.live="status"
+                        label="Status"
+                        
+                    >
+                        <flux:select.option value="" hidden>
+                            Select Status...
+                        </flux:select.option>
+                        <flux:select.option value="Pending">
+                            Pending
+                        </flux:select.option>
 
-                            <flux:select.option value="In Progress">
-                                In Progress
-                            </flux:select.option>
+                        <flux:select.option value="In Progress">
+                            In Progress
+                        </flux:select.option>
 
-                            <flux:select.option value="Done">
-                                Done
-                            </flux:select.option>
+                        <flux:select.option value="Done">
+                            Done
+                        </flux:select.option>
 
-                            <flux:select.option value="For Repair">
-                                For Repair
-                            </flux:select.option>
+                        <flux:select.option value="For Repair">
+                            For Repair
+                        </flux:select.option>
 
-                            <flux:select.option value="Defective">
-                                Defective
-                            </flux:select.option>
+                        <flux:select.option value="Defective">
+                            Defective
+                        </flux:select.option>
 
-                            <flux:select.option value="Disposed">
-                                Disposed
-                            </flux:select.option>
-                        </flux:select>
+                        <flux:select.option value="Disposed">
+                            Disposed
+                        </flux:select.option>
+                        <flux:select.option value="Damaged">
+                            Damaged
+                        </flux:select.option>
+                    </flux:select>
                     </div>
 
                     <div class="lg:col-span-2">
