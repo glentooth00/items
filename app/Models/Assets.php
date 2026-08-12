@@ -16,4 +16,8 @@ class Assets extends Model
     {
         return $this->belongsTo(AssetType::class, 'asset_id');
     }
+
+    public function areaOffice(){
+        return $this->belongsTo(AreaOffices::class, 'area_office_assigned');
+    }
 }

@@ -3,6 +3,7 @@
 use Livewire\Component;
 use App\Models\AssetType;
 use App\Models\Assets;
+use App\Models\AreaOffices;
 use Livewire\WithPagination;
 use Flux\Flux;
 
@@ -25,49 +26,71 @@ new class extends Component
     public $searchTag = '';
     public array $selectedAssets = [];
     public bool $selectAll = false;
+    public $area_office_assigned;
+    public $filterByArea = '';
+    public $filterByStatus = '';
 
     public function render()
     {
         $assetTypes = AssetType::orderBy('asset_type')->get();
+
+        $offices = AreaOffices::get();
 
         $assets = $this->assetsQuery()->paginate(10);
 
         return view('components.assets.⚡index', [
             'assetTypes' => $assetTypes,
             'assets' => $assets,
+            'offices' => $offices
         ]);
     }
 
     protected function assetsQuery()
-{
-    return Assets::with('assetType')
-        ->select('assets.*')
-        ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
+    {
+        return Assets::with('assetType')
+            ->select('assets.*')
+            ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
 
-        // Filter by IT Equipment
-        ->when($this->filterAssetType, function ($query) {
-            $query->where(
-                'assets.asset_id',
-                $this->filterAssetType
+            // Filter by IT Equipment
+            ->when($this->filterAssetType, function ($query) {
+                $query->where(
+                    'assets.asset_id',
+                    $this->filterAssetType
+                );
+            })
+
+            // Filter by Area Office
+            ->when($this->filterByArea, function ($query) {
+                $query->where(
+                    'assets.area_office_assigned',
+                    $this->filterByArea
+                );
+            })
+
+            // Filter by Status
+            ->when($this->filterByStatus, function ($query) {
+                $query->where(
+                    'assets.status',
+                    $this->filterByStatus
+                );
+            })
+
+            // Search by Tag Number
+            ->when($this->searchTag, function ($query) {
+                $query->where(
+                    'assets.tag_number',
+                    'like',
+                    '%' . $this->searchTag . '%'
+                );
+            })
+
+            // Sorting
+            ->orderBy(
+                $this->sortBy === 'asset_type'
+                    ? 'asset_types.asset_type'
+                    : 'assets.' . $this->sortBy,
+                $this->sortDirection
             );
-        })
-
-        // Search by Tag Number
-        ->when($this->searchTag, function ($query) {
-            $query->where(
-                'assets.tag_number',
-                'like',
-                '%' . $this->searchTag . '%'
-            );
-        })
-
-        // Sorting
-        ->orderBy(
-            $this->sortBy === 'asset_type'
-                ? 'asset_types.asset_type'
-                : 'assets.' . $this->sortBy,
-            $this->sortDirection
-        );
     }
 
     public function updatedAssetId($asset_id)
@@ -97,6 +120,7 @@ new class extends Component
             'actual_pm_date'    => 'nullable|date',
             'remarks'           => 'nullable|string',
             'status'            => 'required|string|in:Pending,In Progress,Done,For Repair,Defective,Disposed,Damaged',
+            'area_office_assigned'=> 'nullable'    
         ]);
 
 
@@ -114,6 +138,7 @@ new class extends Component
             'actual_pm_date'   => $this->actual_pm_date,
             'remarks'          => $this->remarks,
             'status'           => $this->status,
+            'area_office_assigned' => $this->area_office_assigned
         ]);
 
         Flux::toast(
@@ -258,7 +283,61 @@ new class extends Component
     </flux:modal.trigger>
 
     <div class="flex items-end gap-3">
-        <div class="w-64">
+        <div class="w-40">
+            <flux:select
+                wire:model.live="filterByStatus"
+                label="Status"
+            >
+                <flux:select.option value="">
+                    Select All
+                </flux:select.option>
+
+                <flux:select.option value="Pending">
+                    Pending
+                </flux:select.option>
+
+                <flux:select.option value="In Progress">
+                    In Progress
+                </flux:select.option>
+
+                <flux:select.option value="Done">
+                    Done
+                </flux:select.option>
+
+                <flux:select.option value="For Repair">
+                    For Repair
+                </flux:select.option>
+
+                <flux:select.option value="Defective">
+                    Defective
+                </flux:select.option>
+
+                <flux:select.option value="Disposed">
+                    Disposed
+                </flux:select.option>
+
+                <flux:select.option value="Damaged">
+                    Damaged
+                </flux:select.option>
+            </flux:select>
+        </div>
+        <div class="w-55">
+            <flux:select
+                wire:model.live="filterByArea"
+                label="Area Assigned"
+            >
+                <flux:select.option value="">
+                    All Area offices
+                </flux:select.option>
+
+                @foreach ($offices as $office)
+                    <flux:select.option value="{{ $office->id }}">
+                        {{ $office->area_office }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+        </div>
+        <div class="w-55">
             <flux:select
                 wire:model.live="filterAssetType"
                 label="Filter by IT Equipment"
@@ -287,29 +366,35 @@ new class extends Component
 
 </div>
 
-        <!------- Table section ------->
+<!------- Table section ------->
 <flux:table :paginate="$assets" class="mt-3">
 
     <flux:table.columns>
 
         {{-- Select All --}}
-        <flux:table.column class="w-10">
-            <flux:checkbox wire:model.live="selectAll" />
+        <flux:table.column class="w-10 text-center">
+            <div class="flex justify-center">
+                <flux:checkbox wire:model.live="selectAll" />
+            </div>
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
             IT Equipment
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
             Tag Number
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
             User/Location
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
+            Office Assigned
+        </flux:table.column>
+
+        <flux:table.column class="text-center">
             PM Schedule Date
         </flux:table.column>
 
@@ -318,19 +403,21 @@ new class extends Component
             :sorted="$sortBy === 'actual_pm_date'"
             :direction="$sortDirection"
             wire:click="sort('actual_pm_date')"
+            class="text-center"
         >
             Actual PM Date
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
             Person in Charge
         </flux:table.column>
 
-        <flux:table.column>
+        <flux:table.column class="text-center">
             Status
         </flux:table.column>
 
-        <flux:table.column></flux:table.column>
+        <flux:table.column class="text-center">
+        </flux:table.column>
 
     </flux:table.columns>
 
@@ -342,16 +429,18 @@ new class extends Component
             <flux:table.row>
 
                 {{-- Individual Checkbox --}}
-                <flux:table.cell class="w-10">
-                    <flux:checkbox
-                        wire:model.live="selectedAssets"
-                        value="{{ $asset->id }}"
-                    />
+                <flux:table.cell class="w-10 text-center">
+                    <div class="flex justify-center">
+                        <flux:checkbox
+                            wire:model.live="selectedAssets"
+                            value="{{ $asset->id }}"
+                        />
+                    </div>
                 </flux:table.cell>
 
 
                 {{-- IT Equipment --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     @php
                         $color = match ($asset->assetType?->asset_type) {
                             'WiFi Router'          => 'blue',
@@ -372,44 +461,52 @@ new class extends Component
                         };
                     @endphp
 
-                    <flux:badge variant="solid" :color="$color">
-                        {{ $asset->assetType?->asset_type }}
-                    </flux:badge>
+                    <div class="flex justify-center">
+                        <flux:badge variant="solid" :color="$color">
+                            {{ $asset->assetType?->asset_type }}
+                        </flux:badge>
+                    </div>
                 </flux:table.cell>
 
 
                 {{-- Tag Number --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     {{ $asset->tag_number }}
                 </flux:table.cell>
 
 
                 {{-- User / Location --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     {{ $asset->user_location }}
                 </flux:table.cell>
 
 
+                {{-- Area Office / Property Assigned --}}
+                <flux:table.cell class="text-center">
+                    {{ $asset->areaOffice?->area_office ?? '-' }}
+                </flux:table.cell>
+
+
                 {{-- PM Schedule Date --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     {{ $asset->pm_schedule_date }}
                 </flux:table.cell>
 
 
                 {{-- Actual PM Date --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     {{ $asset->actual_pm_date?->format('M d, Y') ?? '-' }}
                 </flux:table.cell>
 
 
                 {{-- Person in Charge --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
                     {{ $asset->person_in_charge ?? 'R.J. Dequilla/ G.D. Alpasan/ P.G. Cabrillos' }}
                 </flux:table.cell>
 
 
                 {{-- Status --}}
-                <flux:table.cell>
+                <flux:table.cell class="text-center">
 
                     @php
                         $status = trim($asset->status ?? '');
@@ -428,12 +525,14 @@ new class extends Component
 
                     @if ($status)
 
-                        <flux:badge
-                            variant="solid"
-                            :color="$color"
-                        >
-                            {{ $status }}
-                        </flux:badge>
+                        <div class="flex justify-center">
+                            <flux:badge
+                                variant="solid"
+                                :color="$color"
+                            >
+                                {{ $status }}
+                            </flux:badge>
+                        </div>
 
                     @else
 
@@ -447,55 +546,56 @@ new class extends Component
 
 
                 {{-- Actions --}}
-                <flux:table.cell class="py-0">
+                <flux:table.cell class="py-0 text-center">
 
-                    <flux:dropdown
-                        position="bottom"
-                        align="end"
-                    >
+                    <div class="flex justify-center">
 
-                        <flux:button
-                            variant="ghost"
-                            size="sm"
-                            icon="ellipsis-horizontal"
-                            class="cursor-pointer"
-                        />
+                        <flux:dropdown
+                            position="bottom"
+                            align="end"
+                        >
 
-                        <flux:menu>
-
-                            <flux:menu.item
-                                icon="pencil-square"
-                                wire:click="edit({{ $asset->id }})"
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                icon="ellipsis-horizontal"
                                 class="cursor-pointer"
-                            >
-                                Edit
-                            </flux:menu.item>
+                            />
 
+                            <flux:menu>
 
-                            <flux:menu.item
-                                icon="eye"
-                                href="{{ route('assets.view', $asset->id) }}"
-                                class="cursor-pointer"
-                            >
-                                View
-                            </flux:menu.item>
+                                <flux:menu.item
+                                    icon="pencil-square"
+                                    wire:click="edit({{ $asset->id }})"
+                                    class="cursor-pointer"
+                                >
+                                    Edit
+                                </flux:menu.item>
 
+                                <flux:menu.item
+                                    icon="eye"
+                                    href="{{ route('assets.view', $asset->id) }}"
+                                    class="cursor-pointer"
+                                >
+                                    View
+                                </flux:menu.item>
 
-                            <flux:menu.separator />
+                                <flux:menu.separator />
 
+                                <flux:menu.item
+                                    icon="trash"
+                                    variant="danger"
+                                    wire:click="confirmDelete({{ $asset->id }})"
+                                    class="cursor-pointer"
+                                >
+                                    Delete
+                                </flux:menu.item>
 
-                            <flux:menu.item
-                                icon="trash"
-                                variant="danger"
-                                wire:click="confirmDelete({{ $asset->id }})"
-                                class="cursor-pointer"
-                            >
-                                Delete
-                            </flux:menu.item>
+                            </flux:menu>
 
-                        </flux:menu>
+                        </flux:dropdown>
 
-                    </flux:dropdown>
+                    </div>
 
                 </flux:table.cell>
 
@@ -506,7 +606,7 @@ new class extends Component
             <flux:table.row>
 
                 <flux:table.cell
-                    colspan="9"
+                    colspan="10"
                     class="text-center"
                 >
                     No assets found.
@@ -541,8 +641,10 @@ new class extends Component
                         <flux:select
                             wire:model.live="asset_id"
                             label="Asset Type"
-                            placeholder="Choose equipment..."
                         >
+                            <flux:select.option value="" hidden selected>
+                                Choose equipment...
+                            </flux:select.option>
                             @foreach ($assetTypes as $assetType)
                                 <flux:select.option value="{{ $assetType->id }}">
                                     {{ $assetType->asset_type }}
@@ -575,9 +677,23 @@ new class extends Component
                             label="User / Location"
                             placeholder="Enter name of user"
                         />
-                        </div>
+                    </div>
 
-                    <div>
+                     <div>
+                        <flux:select
+                            wire:model.live="area_office_assigned"
+                            label="Office Location"
+                            placeholder="Select office..."
+                        >
+                        <flux:select.option value="">
+                            N/A
+                        </flux:select.option>
+                            @foreach ($offices as $office)
+                                <flux:select.option value="{{ $office->id }}">
+                                    {{ $office->area_office }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
                     </div>
 
                     <div>
