@@ -32,6 +32,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('/system-unit', 'system-unit.index')->name('system-unit.index');
     Route::livewire('/server', 'server.index')->name('server.index');
     Route::livewire('/laser-printer', 'laser-printer.index')->name('laser-printer.index');
+
+
+    Route::livewire('/asset/{id}', 'assets.view')->name('assets.view');
+
 });
 
 require __DIR__.'/settings.php';
