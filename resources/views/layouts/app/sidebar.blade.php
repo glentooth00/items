@@ -29,6 +29,7 @@
                     {{ __('IT Inventory') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
+            
             </flux:sidebar.group>
             <flux:sidebar.group :heading="__('')" class="grid">
                 <flux:sidebar.item icon="square-3-stack-3d" :href="route('assets.index')" :current="request()->routeIs('assets.index')"
@@ -56,6 +57,13 @@
                 @endforeach
             </flux:sidebar.group>
 
+            <flux:sidebar.group :heading="__('')" class="grid">
+                <flux:sidebar.item icon="calendar-date-range" :href="route('inventory.index')" :current="request()->routeIs('inventory.index')"
+                    wire:navigate>
+                    {{ __('Maintenance') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
+            
             {{-- <flux:sidebar.group expandable :expanded="false" heading="Assets" class="grid">
                 <flux:sidebar.item href="#">UPS</flux:sidebar.item>
                 <flux:sidebar.item href="#">System Units</flux:sidebar.item>
