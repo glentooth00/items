@@ -23,41 +23,51 @@ new class extends Component
     public $status;
     public $filterAssetType = '';
     public $searchTag = '';
+    public array $selectedAssets = [];
+    public bool $selectAll = false;
 
     public function render()
     {
         $assetTypes = AssetType::orderBy('asset_type')->get();
 
-        $assets = Assets::with('assetType')
-            ->select('assets.*')
-            ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
-
-            // Filter by IT Equipment
-            ->when($this->filterAssetType, function ($query) {
-                $query->where('assets.asset_id', $this->filterAssetType);
-            })
-
-            // Search by Tag Number
-            ->when($this->searchTag, function ($query) {
-                $query->where(
-                    'assets.tag_number',
-                    'like',
-                    '%' . $this->searchTag . '%'
-                );
-            })
-
-            ->orderBy(
-                $this->sortBy === 'asset_type'
-                    ? 'asset_types.asset_type'
-                    : 'assets.' . $this->sortBy,
-                $this->sortDirection
-            )
-            ->paginate(10);
+        $assets = $this->assetsQuery()->paginate(10);
 
         return view('components.assets.⚡index', [
             'assetTypes' => $assetTypes,
             'assets' => $assets,
         ]);
+    }
+
+    protected function assetsQuery()
+{
+    return Assets::with('assetType')
+        ->select('assets.*')
+        ->join('asset_types', 'assets.asset_id', '=', 'asset_types.id')
+
+        // Filter by IT Equipment
+        ->when($this->filterAssetType, function ($query) {
+            $query->where(
+                'assets.asset_id',
+                $this->filterAssetType
+            );
+        })
+
+        // Search by Tag Number
+        ->when($this->searchTag, function ($query) {
+            $query->where(
+                'assets.tag_number',
+                'like',
+                '%' . $this->searchTag . '%'
+            );
+        })
+
+        // Sorting
+        ->orderBy(
+            $this->sortBy === 'asset_type'
+                ? 'asset_types.asset_type'
+                : 'assets.' . $this->sortBy,
+            $this->sortDirection
+        );
     }
 
     public function updatedAssetId($asset_id)
@@ -183,6 +193,48 @@ new class extends Component
     {
         $this->resetPage();
     }
+
+    public function updatedSelectedAssets()
+    {
+        // Get IDs from the current page
+        $currentPageIds = $this->assetsQuery()
+            ->paginate(10)
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->toArray();
+
+        // Check if every asset on the current page is selected
+        $this->selectAll =
+            count($currentPageIds) > 0 &&
+            empty(array_diff(
+                $currentPageIds,
+                $this->selectedAssets
+            ));
+    }
+
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+
+            // Get IDs from the CURRENT PAGE
+            $this->selectedAssets = $this->assetsQuery()
+                ->paginate(10)
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->toArray();
+
+        } else {
+
+            $this->selectedAssets = [];
+        }
+    }
+
+    public function deselectAll()
+    {
+        $this->selectedAssets = [];
+        $this->selectAll = false;
+    }
+
 };
 ?>
 
@@ -236,155 +288,237 @@ new class extends Component
 </div>
 
         <!------- Table section ------->
+<flux:table :paginate="$assets" class="mt-3">
 
-        <flux:table :paginate="$assets" class="mt-3">
-            <flux:table.columns>
-                <flux:table.column>
-                    IT Equipment   
-                </flux:table.column>
-                <flux:table.column>
-                    Tag Number   
-                </flux:table.column>
-                <flux:table.column>
-                    User/Location   
-                </flux:table.column>
-                <flux:table.column >
-                    PM Schedule Date   
-                </flux:table.column>
-                <flux:table.column sortable :sorted="$sortBy === 'actual_pm_date'" :direction="$sortDirection" wire:click="sort('actual_pm_date')">
-                    Actual PM Date   
-                </flux:table.column>
-                <flux:table.column>
-                    Person in Charge   
-                </flux:table.column>
-                <flux:table.column>
-                    Status   
-                </flux:table.column>
-                <flux:table.column>
-                       
-                </flux:table.column>
-            </flux:table.columns>
+    <flux:table.columns>
 
-            <flux:table.rows>
-                @forelse ($assets as $asset)
-                    <flux:table.row>
-                        <flux:table.cell>
-                            @php
-                            $color = match ($asset->assetType?->asset_type) {
-                                'WiFi Router'          => 'blue',
-                                'UPS'                  => 'amber',
-                                'System Unit'          => 'zinc',
-                                'Server'               => 'red',
-                                'Router'               => 'sky',
-                                'Printer (Ink Tank)'   => 'green',
-                                'Printer (Dot Matrix)' => 'orange',
-                                'Network Switch'       => 'indigo',
-                                'Laser Printer'        => 'violet',
-                                'Laptop'               => 'cyan',
-                                'External Drive'       => 'emerald',
-                                'CCTV NVR'             => 'purple',
-                                'CCTV Camera'          => 'yellow',
-                                'Access Point'         => 'teal',
-                                default                => 'pink',
-                            };
-                        @endphp
+        {{-- Select All --}}
+        <flux:table.column class="w-10">
+            <flux:checkbox wire:model.live="selectAll" />
+        </flux:table.column>
 
-                        <flux:badge variant="solid" :color="$color">
-                            {{ $asset->assetType?->asset_type }}
+        <flux:table.column>
+            IT Equipment
+        </flux:table.column>
+
+        <flux:table.column>
+            Tag Number
+        </flux:table.column>
+
+        <flux:table.column>
+            User/Location
+        </flux:table.column>
+
+        <flux:table.column>
+            PM Schedule Date
+        </flux:table.column>
+
+        <flux:table.column
+            sortable
+            :sorted="$sortBy === 'actual_pm_date'"
+            :direction="$sortDirection"
+            wire:click="sort('actual_pm_date')"
+        >
+            Actual PM Date
+        </flux:table.column>
+
+        <flux:table.column>
+            Person in Charge
+        </flux:table.column>
+
+        <flux:table.column>
+            Status
+        </flux:table.column>
+
+        <flux:table.column></flux:table.column>
+
+    </flux:table.columns>
+
+
+    <flux:table.rows>
+
+        @forelse ($assets as $asset)
+
+            <flux:table.row>
+
+                {{-- Individual Checkbox --}}
+                <flux:table.cell class="w-10">
+                    <flux:checkbox
+                        wire:model.live="selectedAssets"
+                        value="{{ $asset->id }}"
+                    />
+                </flux:table.cell>
+
+
+                {{-- IT Equipment --}}
+                <flux:table.cell>
+                    @php
+                        $color = match ($asset->assetType?->asset_type) {
+                            'WiFi Router'          => 'blue',
+                            'UPS'                  => 'amber',
+                            'System Unit'          => 'zinc',
+                            'Server'               => 'red',
+                            'Router'               => 'sky',
+                            'Printer (Ink Tank)'   => 'green',
+                            'Printer (Dot Matrix)' => 'orange',
+                            'Network Switch'      => 'indigo',
+                            'Laser Printer'        => 'violet',
+                            'Laptop'               => 'cyan',
+                            'External Drive'       => 'emerald',
+                            'CCTV NVR'             => 'purple',
+                            'CCTV Camera'          => 'yellow',
+                            'Access Point'         => 'teal',
+                            default                => 'pink',
+                        };
+                    @endphp
+
+                    <flux:badge variant="solid" :color="$color">
+                        {{ $asset->assetType?->asset_type }}
+                    </flux:badge>
+                </flux:table.cell>
+
+
+                {{-- Tag Number --}}
+                <flux:table.cell>
+                    {{ $asset->tag_number }}
+                </flux:table.cell>
+
+
+                {{-- User / Location --}}
+                <flux:table.cell>
+                    {{ $asset->user_location }}
+                </flux:table.cell>
+
+
+                {{-- PM Schedule Date --}}
+                <flux:table.cell>
+                    {{ $asset->pm_schedule_date }}
+                </flux:table.cell>
+
+
+                {{-- Actual PM Date --}}
+                <flux:table.cell>
+                    {{ $asset->actual_pm_date?->format('M d, Y') ?? '-' }}
+                </flux:table.cell>
+
+
+                {{-- Person in Charge --}}
+                <flux:table.cell>
+                    {{ $asset->person_in_charge ?? 'R.J. Dequilla/ G.D. Alpasan/ P.G. Cabrillos' }}
+                </flux:table.cell>
+
+
+                {{-- Status --}}
+                <flux:table.cell>
+
+                    @php
+                        $status = trim($asset->status ?? '');
+
+                        $color = match (strtolower($status)) {
+                            'done'        => 'emerald',
+                            'pending'     => 'amber',
+                            'in progress' => 'blue',
+                            'for repair'  => 'orange',
+                            'defective'   => 'red',
+                            'disposed'    => 'zinc',
+                            'damaged'     => 'red',
+                            default       => 'purple',
+                        };
+                    @endphp
+
+                    @if ($status)
+
+                        <flux:badge
+                            variant="solid"
+                            :color="$color"
+                        >
+                            {{ $status }}
                         </flux:badge>
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            {{ $asset->tag_number }} 
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            {{ $asset->user_location }}
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            {{ $asset->pm_schedule_date }}
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            {{ $asset->actual_pm_date?->format('M d, Y') ?? '-' }}
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            {{ $asset->person_in_charge ?? 'R.J. Dequilla/ G.D. Alpasan/ P.G. Cabrillos' }}
-                        </flux:table.cell>
-                        <flux:table.cell>
-                            @php
-                                $status = trim($asset->status ?? '');
 
-                                $color = match (strtolower($status)) {
-                                    'done'         => 'emerald',
-                                    'pending'      => 'amber',
-                                    'in progress'  => 'blue',
-                                    'for repair'   => 'orange',
-                                    'defective'    => 'red',
-                                    'disposed'     => 'zinc',
-                                    'damaged'      => 'red',
-                                    default        => 'purple',
-                                };
-                            @endphp
+                    @else
 
-                            @if ($status)
-                                <flux:badge variant="solid" :color="$color">
-                                    {{ $status }}
-                                </flux:badge>
-                            @else
-                                <span class="text-zinc-500">-</span>
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell class="py-0">
+                        <span class="text-zinc-500">
+                            -
+                        </span>
 
-                            <flux:dropdown position="bottom" align="end">
+                    @endif
 
-                                <flux:button
-                                    variant="ghost"
-                                    size="sm"
-                                    icon="ellipsis-horizontal"
-                                    class="cursor-pointer"
-                                />
+                </flux:table.cell>
 
-                                <flux:menu>
-                                    <flux:menu.item
-                                        icon="pencil-square"
-                                        wire:click="edit({{ $asset->id }})"
-                                        class="cursor-pointer"
-                                    >
-                                        Edit
-                                    </flux:menu.item>
 
-                                    <flux:menu.item
-                                        icon="eye"
-                                        wire:click="view({{ $asset->id }})"
-                                        class="cursor-pointer"
-                                    >
-                                        View
-                                    </flux:menu.item>
+                {{-- Actions --}}
+                <flux:table.cell class="py-0">
 
-                                    <flux:menu.separator />
+                    <flux:dropdown
+                        position="bottom"
+                        align="end"
+                    >
 
-                                    <flux:menu.item
-                                        icon="trash"
-                                        variant="danger"
-                                        wire:click="confirmDelete({{ $asset->id }})"
-                                        class="cursor-pointer"
-                                    >
-                                        Delete
-                                    </flux:menu.item>
-                                </flux:menu>
+                        <flux:button
+                            variant="ghost"
+                            size="sm"
+                            icon="ellipsis-horizontal"
+                            class="cursor-pointer"
+                        />
 
-                            </flux:dropdown>
+                        <flux:menu>
 
-                        </flux:table.cell>
-                    </flux:table.row>
-                @empty
-                    <flux:table.row>
-                        <flux:table.cell colspan="8" class="text-center">
-                            No assets found.
-                        </flux:table.cell>
-                    </flux:table.row>
-                @endforelse
-            </flux:table.rows>
-        </flux:table>
+                            <flux:menu.item
+                                icon="pencil-square"
+                                wire:click="edit({{ $asset->id }})"
+                                class="cursor-pointer"
+                            >
+                                Edit
+                            </flux:menu.item>
+
+
+                            <flux:menu.item
+                                icon="eye"
+                                href="{{ route('assets.view', $asset->id) }}"
+                                class="cursor-pointer"
+                            >
+                                View
+                            </flux:menu.item>
+
+
+                            <flux:menu.separator />
+
+
+                            <flux:menu.item
+                                icon="trash"
+                                variant="danger"
+                                wire:click="confirmDelete({{ $asset->id }})"
+                                class="cursor-pointer"
+                            >
+                                Delete
+                            </flux:menu.item>
+
+                        </flux:menu>
+
+                    </flux:dropdown>
+
+                </flux:table.cell>
+
+            </flux:table.row>
+
+        @empty
+
+            <flux:table.row>
+
+                <flux:table.cell
+                    colspan="9"
+                    class="text-center"
+                >
+                    No assets found.
+                </flux:table.cell>
+
+            </flux:table.row>
+
+        @endforelse
+
+    </flux:table.rows>
+
+</flux:table>
 
         <!-- $$assets = Assets::paginate(10) -->
         {{-- <flux:pagination class="cursor-pointer" :paginator="$assets" /> --}}
