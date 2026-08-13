@@ -58,7 +58,7 @@
             </flux:sidebar.group>
 
             <flux:sidebar.group :heading="__('')" class="grid">
-                <flux:sidebar.item icon="calendar-date-range" :href="route('inventory.index')" :current="request()->routeIs('inventory.index')"
+                <flux:sidebar.item icon="calendar-date-range" :href="route('schedule.index')" :current="request()->routeIs('schedule.index')"
                     wire:navigate>
                     {{ __('Maintenance') }}
                 </flux:sidebar.item>

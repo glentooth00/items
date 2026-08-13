@@ -15,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('/asset-types', 'asset-types.index')->name('asset-types.index');
     Route::livewire('/offices', 'area-office.index')->name('offices.index');
     Route::livewire('/inventory', 'inventory.index')->name('inventory.index');
+    Route::livewire('/schedule', 'schedule.index')->name('schedule.index');
 
 
     //menu items for asset types
