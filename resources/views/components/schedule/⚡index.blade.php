@@ -30,6 +30,8 @@ new class extends Component
 
     }
 
+    //public function saveSchedule
+
 };
 ?>
 
@@ -295,9 +297,11 @@ new class extends Component
         name="create-maintenance-schedule"
         class="max-w-5xl"
     >
+    <form wire:submit="saveSchedule">
 
         <div class="space-y-6">
 
+            {{-- Header --}}
             <div>
                 <flux:heading size="lg">
                     Create Maintenance Schedule
@@ -308,13 +312,14 @@ new class extends Component
                 </flux:text>
             </div>
 
-
             {{-- Schedule Details --}}
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
+                {{-- Area Office --}}
                 <flux:select
                     wire:model.live="area_office_id"
                     label="Area Office"
+                    placeholder="Select Area Office"
                 >
 
                     <flux:select.option value="">
@@ -322,20 +327,25 @@ new class extends Component
                     </flux:select.option>
 
                     @foreach ($offices as $office)
+
                         <flux:select.option value="{{ $office->id }}">
                             {{ $office->area_office }}
                         </flux:select.option>
+
                     @endforeach
 
                 </flux:select>
 
 
+                {{-- From --}}
                 <flux:input
                     type="date"
                     wire:model="from"
                     label="From"
                 />
 
+
+                {{-- To --}}
                 <flux:input
                     type="date"
                     wire:model="to"
@@ -345,108 +355,26 @@ new class extends Component
             </div>
 
 
-            {{-- Assets --}}
-            <div class="border rounded-lg overflow-hidden">
+            {{-- Validation errors --}}
+            @error('area_office_id')
+                <flux:text class="text-red-500 text-sm">
+                    {{ $message }}
+                </flux:text>
+            @enderror
 
-                <div class="px-4 py-3 border-b bg-zinc-50 dark:bg-zinc-800">
+            @error('from')
+                <flux:text class="text-red-500 text-sm">
+                    {{ $message }}
+                </flux:text>
+            @enderror
 
-                    <flux:heading size="sm">
-                        Assets Assigned to Area Office
-                    </flux:heading>
-
-                </div>
-
-
-                @if ($area_office_id)
-
-                    <flux:table>
-
-                        <flux:table.columns>
-
-                            <flux:table.column class="w-10 text-center">
-                                Select
-                            </flux:table.column>
-
-                            <flux:table.column class="text-center">
-                                IT Equipment
-                            </flux:table.column>
-
-                            <flux:table.column class="text-center">
-                                Tag Number
-                            </flux:table.column>
-
-                            <flux:table.column class="text-center">
-                                User / Location
-                            </flux:table.column>
-
-                        </flux:table.columns>
+            @error('to')
+                <flux:text class="text-red-500 text-sm">
+                    {{ $message }}
+                </flux:text>
+            @enderror
 
 
-                        <flux:table.rows>
-
-                            @forelse ($this->availableAssets as $asset)
-
-                                <flux:table.row>
-
-                                    <flux:table.cell class="text-center">
-
-                                        <div class="flex justify-center">
-
-                                            <flux:checkbox
-                                                wire:model.live="selectedAssets"
-                                                value="{{ $asset->id }}"
-                                            />
-
-                                        </div>
-
-                                    </flux:table.cell>
-
-                                    <flux:table.cell class="text-center">
-                                        {{ $asset->assetType?->asset_type ?? '-' }}
-                                    </flux:table.cell>
-
-                                    <flux:table.cell class="text-center">
-                                        {{ $asset->tag_number }}
-                                    </flux:table.cell>
-
-                                    <flux:table.cell class="text-center">
-                                        {{ $asset->user_location ?? '-' }}
-                                    </flux:table.cell>
-
-                                </flux:table.row>
-
-                            @empty
-
-                                <flux:table.row>
-
-                                    <flux:table.cell
-                                        colspan="4"
-                                        class="text-center py-6"
-                                    >
-                                        No assets assigned to this area office.
-                                    </flux:table.cell>
-
-                                </flux:table.row>
-
-                            @endforelse
-
-                        </flux:table.rows>
-
-                    </flux:table>
-
-                @else
-
-                    <div class="py-8 text-center">
-
-                        <flux:text>
-                            Select an area office to display its assets.
-                        </flux:text>
-
-                    </div>
-
-                @endif
-
-            </div>
 
 
             {{-- Remarks --}}
@@ -458,27 +386,43 @@ new class extends Component
 
 
             {{-- Actions --}}
-            <div class="flex justify-end gap-2">
+            <div class="flex justify-end gap-2 pt-2">
 
                 <flux:button
+                    type="button"
                     variant="ghost"
                     x-on:click="$flux.modal('create-maintenance-schedule').close()"
+                    class="cursor-pointer"
                 >
                     Cancel
                 </flux:button>
 
+
                 <flux:button
+                    type="submit"
                     variant="primary"
                     icon="calendar-days"
-                    wire:click="saveSchedule"
+                    wire:loading.attr="disabled"
+                    wire:target="saveSchedule"
+                    class="cursor-pointer"
                 >
-                    Schedule Maintenance
+
+                    <span wire:loading.remove wire:target="saveSchedule">
+                        Schedule Maintenance
+                    </span>
+
+                    <span wire:loading wire:target="saveSchedule">
+                        Saving...
+                    </span>
+
                 </flux:button>
 
             </div>
 
         </div>
 
-    </flux:modal>
+    </form>
+
+</flux:modal>
 
 </div>
